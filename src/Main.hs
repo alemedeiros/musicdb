@@ -1,7 +1,8 @@
 -- Main.hs
 --  by alemedeiros <alexandre.n.medeiros _at_ gmail.com>
 --
--- Main file for musicdb -- ECS713 Functional Programming Project
+-- Main file for musicdb, a MusicBrainz based artist information database
+-- application
 
 import System.Environment
 import System.IO

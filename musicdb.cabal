@@ -2,12 +2,12 @@
 --  by alemedeiros <alexandre.n.medeiros _at_ gmail.com>
 --
 -- Cabal file for musicdb project -- A Musicbrainz based artist information
--- database program
+-- database application
 
 name:                musicdb
 version:             0.1.0.0
 
-synopsis:            A MusicBrainz based artist information database program
+synopsis:            A MusicBrainz based artist information database application
 description:         A small project for artist/music information database using MusicBrainz as a source of information (Individual Project for QMUL's ECS713 - Functional Programming Module).
 
 license:             BSD3
