@@ -1,0 +1,4 @@
+# Build / cabal related files
+dist/
+.cabal-sandbox/
+cabal.sandbox.config
