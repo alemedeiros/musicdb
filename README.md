@@ -9,16 +9,14 @@ Author: alemedeiros (Alexandre Medeiros)
 ##How to build
 
 If you don't want to install the dependencies on the whole system, initialize a
-cabal sandbox
+cabal sandbox then install the dependencies
 
     cabal sandbox init
-
-Then install the dependencies
-
     cabal install --only-dependencies
 
-Then build the project with
+Then configure and build the project with
 
+    cabal configure
     cabal build
 
 ##Running
