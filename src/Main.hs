@@ -4,6 +4,7 @@
 -- Main file for musicdb, a MusicBrainz based artist information database
 -- application
 
+import MusicBrainz
 import MusicDB
 
 import System.Environment
@@ -19,7 +20,12 @@ main :: IO ()
 main = do args <- getArgs
           case args of
                   ("init":_) -> createDB "music.db"
-                  ("add":art:_) -> undefined -- TODO
+                  ("add":art:_) -> do
+                          artInfo <- getArtistInfo art
+                          putStrLn artInfo
+                  ("search":art:_) -> do
+                          artSearch <- searchArtist art 1
+                          putStrLn artSearch
                   -- Help commands
                   ("help":_) -> printHelp
                   ("usage":_) -> printHelp
