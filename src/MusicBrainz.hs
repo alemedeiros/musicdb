@@ -11,6 +11,7 @@
 module MusicBrainz (getArtistInfo, searchArtist) where
 
 import MusicBrainz.URI
+import MusicBrainz.Parser
 
 import Network.HTTP
 import Network.URI
@@ -24,16 +25,19 @@ getArtistInfo id = undefined
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result
 searchArtist :: String -> Int -> IO String
-searchArtist art lim = urlDownload $ uriSearchArtist art lim
+searchArtist art lim = do
+        srch <- uriDownload $ uriSearchArtist art lim
+        return . show $ idFromSearch srch
 
 -- |Download a given uri and return its content as a String
-urlDownload :: URI -> IO String
-urlDownload uri = do 
+uriDownload :: URI -> IO String
+uriDownload uri = do
         resp <- simpleHTTP request
         case resp of
                 Left x -> return $ "Error connecting: " ++ show x
                 Right r -> case rspCode r of
                         (2,_,_) -> return $ rspBody r
+                        -- TODO check other return codes
                         _ -> return $ show r
                 where
                         request = Request

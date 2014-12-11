@@ -16,6 +16,9 @@ import System.IO
 --
 --  [@add artist@] will download the artist information with it's releases and
 --  add to the database
+--
+--  [@search artist@] will search MusicBrainz database for the given artist and
+--  print the top results
 main :: IO ()
 main = do args <- getArgs
           case args of
