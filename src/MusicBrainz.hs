@@ -10,6 +10,8 @@
 -- the releases, artists and songs.
 module MusicBrainz (getArtistInfo, searchArtist) where
 
+import Data.Maybe
+
 import MusicBrainz.URI
 import MusicBrainz.Parser
 
@@ -20,7 +22,12 @@ type URL = String
 
 -- |Get the information XML for the artist with the ID specified on the string.
 getArtistInfo :: String -> IO String
-getArtistInfo id = undefined
+getArtistInfo art = do
+        srch <- uriDownload $ uriSearchArtist art 1
+        let
+            id = head . fromJust $ idFromSearch srch
+        putStrLn srch
+        uriDownload $ uriLookupArtist id
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

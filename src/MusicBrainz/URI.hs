@@ -11,15 +11,30 @@ module MusicBrainz.URI where
 import Network.HTTP
 import Network.URI
 
--- |Build the URI for a seach with the given artist name
+-- |Build the URI for a search with the given artist name
 --
 -- The format of the artist search is:
 -- http://musicbrainz.org/ws/2/artist/?query=artist:<artist>&limit=1
 uriSearchArtist :: String -> Int -> URI
-uriSearchArtist art lim = URI 
+uriSearchArtist art lim = URI
         { uriScheme = "http:"
         , uriAuthority = Just $ URIAuth "" "musicbrainz.org" ""
         , uriPath = "/ws/2/artist/"
         , uriQuery = "?query=artist:" ++ urlEncode art ++ "&limit=" ++ show lim
+        , uriFragment = ""
+        }
+
+-- |Build the URI for a lookup request with the given artist id
+--
+-- Assume the id is valid
+--
+-- The format of the artist search is:
+-- http://musicbrainz.org/ws/2/artist/<id>?inc=releases+recordings+tags
+uriLookupArtist :: String -> URI
+uriLookupArtist id = URI
+        { uriScheme = "http:"
+        , uriAuthority = Just $ URIAuth "" "musicbrainz.org" ""
+        , uriPath = "/ws/2/artist/" ++ id
+        , uriQuery = "?inc=release-groups" -- "releases+recordings+tags"
         , uriFragment = ""
         }
