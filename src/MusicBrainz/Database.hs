@@ -1,14 +1,16 @@
--- MusicDB.hs
+-- Database.hs
 --  by alemedeiros <alexandre.n.medeiros _at_ gmail.com>
 --
--- Database interface module for musicdb
+-- Musicbrainz interface module for musicdb
+--
+-- Database submodule, responsible for handling local data.
 
 -- |MusicDB module is responsible for the interaction between the application
 -- with the local database -- SQLite3.
 --
 -- It is responsible for initializing, storing and querying the local database
 -- file.
-module MusicDB where
+module MusicBrainz.Database where
 -- TODO Export only externaly used declarations
 
 import Database.HDBC

@@ -5,7 +5,7 @@
 -- application
 
 import MusicBrainz
-import MusicDB
+import MusicBrainz.Database
 
 import System.Environment
 import System.IO
@@ -27,7 +27,7 @@ main = do args <- getArgs
                           artInfo <- getArtistInfo art
                           putStrLn artInfo
                   ("search":art:_) -> do
-                          artSearch <- searchArtist art 1
+                          artSearch <- searchArtist art 4
                           putStrLn artSearch
                   -- Help commands
                   ("help":_) -> printHelp
