@@ -8,33 +8,83 @@
 -- |Contains functions for XML parsing of the MusicBrainz XML data
 module MusicBrainz.Parser (idFromSearch) where
 
+import Control.Applicative
+
+import Data.List
 import Data.Maybe
 
 import Text.XML.Light.Input
 import Text.XML.Light.Types
 
+
+{- Exported functions -}
+
 -- |Parse artist ID from MusicBrainz's search XML
-idFromSearch :: String -> [Maybe String]
-idFromSearch xml = fromJust . fmap (map getID) $ getArtList xmlData
+idFromSearch :: String -> Maybe [String]
+idFromSearch xml = mapMaybe idFromArtist <$> getArtistList xmlData
         where
                 xmlData = parseXML . removeHeader $ xml
+                -- Read artist ID from artist content element of xml
+                idFromArtist :: Content -> Maybe String
+                idFromArtist = (=<<) getArtistID . getElement
+
+
+{- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base XML
-getArtList :: [Content] -> Maybe [Content] 
-getArtList [Elem (Element {elContent=[Elem (Element {elContent=artList})]})] = Just artList
-getArtList _ = Nothing
+getArtistList :: [Content] -> Maybe [Content]
+getArtistList [Elem (Element {elContent=[Elem (Element {elContent=artList})]})] = Just artList
+getArtistList _ = Nothing
 
 -- |Get artist ID from artist xml tag
-getID :: Content -> Maybe String
-getID (Elem (Element {elAttribs=attr})) = getAttr "id" attr
-getID _ = Nothing
+getArtistID :: Element -> Maybe String
+getArtistID (Element {elAttribs=attr}) = getAttr "id" attr
+
+
+{- Get Content actual values functions -}
+
+-- |Get Element from Content
+getElement :: Content -> Maybe Element
+getElement (Elem e) = Just e
+getElement _ = Nothing
+
+-- |Get Data from Content
+getData :: Content -> Maybe CData
+getData (Text d) = Just d
+getData _ = Nothing
+
+-- |Get CRef from Content
+getCRef :: Content -> Maybe String
+getCRef (CRef r) = Just r
+getCRef _ = Nothing
+
+{- Attribute content functions -}
 
 -- |Find an attribute on an attribute list and return its value
 getAttr :: String -> [Attr] -> Maybe String
-getAttr _ [] = Nothing
-getAttr attr ((Attr {attrVal=val, attrKey=(QName {qName=key})}):attrs)
-                            | key == attr = Just val
-                            | otherwise = getAttr attr attrs
+getAttr attr = fmap getAttrVal . find ((==) attr . getAttrName)
+
+-- |Get Attribute name
+getAttrName :: Attr -> String
+getAttrName (Attr {attrKey=(QName {qName=name})}) = name
+
+-- |Get Attribute value
+getAttrVal :: Attr -> String
+getAttrVal (Attr {attrVal=val}) = val
+
+
+{- Element content functions -}
+
+-- |Get Element contents
+getElementContents :: Element -> [Content]
+getElementContents (Element {elContent=conts}) = conts
+
+-- |Get Element name
+getElementName :: Element -> String
+getElementName (Element {elName=(QName {qName=name})}) = name
+
+
+{- General helper functions -}
 
 -- |Remove xml version header
 removeHeader :: String -> String
