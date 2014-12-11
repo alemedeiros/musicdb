@@ -26,14 +26,24 @@ idFromSearch xml = mapMaybe idFromArtist <$> getArtistList xmlData
                 xmlData = parseXML . removeHeader $ xml
                 -- Read artist ID from artist content element of xml
                 idFromArtist :: Content -> Maybe String
-                idFromArtist = (=<<) getArtistID . getElement
+                idFromArtist = (=<<) getArtistID . (=<<) checkArtist . getElement
+                checkArtist :: Element -> Maybe Element
+                checkArtist e
+                        | getElementName e /= "artist" = Nothing
+                        | otherwise = Just e
 
 
 {- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base XML
 getArtistList :: [Content] -> Maybe [Content]
-getArtistList [Elem (Element {elContent=[Elem (Element {elContent=artList})]})] = Just artList
+getArtistList [Elem e]
+        | getElementName e /= "metadata" = Nothing
+        | otherwise = auxGetArtistList $ getElementContents e
+       where
+               auxGetArtistList [Elem e']
+                                | getElementName e' /= "artist-list" = Nothing
+                                | otherwise = Just $ getElementContents e'
 getArtistList _ = Nothing
 
 -- |Get artist ID from artist xml tag
