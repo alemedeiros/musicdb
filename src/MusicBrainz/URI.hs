@@ -35,6 +35,6 @@ uriLookupArtist id = URI
         { uriScheme = "http:"
         , uriAuthority = Just $ URIAuth "" "musicbrainz.org" ""
         , uriPath = "/ws/2/artist/" ++ id
-        , uriQuery = "?inc=release-groups" -- "releases+recordings+tags"
+        , uriQuery = "?inc=release-groups+tags"
         , uriFragment = ""
         }
