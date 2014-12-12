@@ -35,7 +35,12 @@ getArtistInfo art lim = do
                               return $ "Artist not found\n\n" ++ searchResult
                 Just (id,_) -> do
                         artLookup <- uriDownload $ uriLookupArtist id
-                        return $ "Artist found\n\n" ++ artLookup
+                        let
+                            artData = getArtistLookupResult artLookup
+                        case artData of
+                                Nothing -> return $ "Artist found but could not parse xml\n\n" ++ artLookup
+                                Just a -> do -- TODO insert to database!
+                                        return $ "Artist found\n\n" ++ show a
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

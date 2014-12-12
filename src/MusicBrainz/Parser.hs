@@ -38,29 +38,43 @@ getSearchResult = maybe [] (mapMaybe idFromArtist) . artistList
                 readTagInfo = (=<<) (maybePair . (getArtistID &&& getArtistName))
 
 -- |Parse artist informations from MusicBrainz's lookup XML
---getArtistLookupResult :: String -> Maybe Artist
-getArtistLookupResult = (=<<) magic . artistData
+getArtistLookupResult :: String -> Maybe Artist
+getArtistLookupResult = (=<<) readArtistData . artistData
         where
                 artistData = getArtistListFromLookup . parseXML . removeHeader
 
                 -- Read artist information from artist xml tag
-                magic :: Element -> Maybe Artist
-                magic _ = Nothing
+                readArtistData :: Element -> Maybe Artist
+                readArtistData e
+                        | isNothing id = Nothing
+                        | isNothing name = Nothing
+                        | isNothing relg = Nothing
+                        | isNothing tags = Nothing
+                        | otherwise = Just $ Artist jId jName jRelg jTags
+                        where
+                                id = getArtistID e
+                                name = getArtistName e
+                                relg = getArtistRelGroupIDList e
+                                tags = getArtistTagList e
+                                jId = fromJust id
+                                jName = fromJust name
+                                jRelg = fromJust relg
+                                jTags = fromJust tags
 
 
 {- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base search XML
 getArtistListFromSearch :: [Content] -> Maybe [Content]
-getArtistListFromSearch [Elem e] = auxSearch . getElementContents =<< checkTag "metadata" e
+getArtistListFromSearch [Elem e] = auxSearch . elContent =<< checkTag "metadata" e
        where
                auxSearch :: [Content] -> Maybe [Content]
-               auxSearch [Elem e'] = getElementContents <$> checkTag "artist-list" e'
+               auxSearch [Elem e'] = elContent <$> checkTag "artist-list" e'
 getArtistListFromSearch _ = Nothing
 
 -- |Get artist from base lookup XML
 getArtistListFromLookup :: [Content] -> Maybe Element
-getArtistListFromLookup [Elem e] = auxLookup . getElementContents =<< checkTag "metadata" e
+getArtistListFromLookup [Elem e] = auxLookup . elContent =<< checkTag "metadata" e
        where
                auxLookup :: [Content] -> Maybe Element
                auxLookup [Elem e'] = checkTag "artist" e'
@@ -68,23 +82,34 @@ getArtistListFromLookup _ = Nothing
 
 -- |Get artist ID from artist xml tag
 getArtistID :: Element -> Maybe String
-getArtistID (Element {elAttribs=attr}) = getAttrVal <$> getAttrByName "id" attr
+getArtistID = getElemAttrVal "id"
 
 -- |Get artist name from artist xml tag
 getArtistName :: Element -> Maybe String
-getArtistName (Element {elContent=cont}) = readTagText =<< getElementByName "name" cont
+getArtistName = getElemText "name"
 
 -- |Get artist name from artist xml tag
 getArtistRelGroupIDList :: Element -> Maybe [String]
-getArtistRelGroupIDList (Element {elContent=cont}) = readRelGroupID =<< getElementByName "release-group-list" cont
+getArtistRelGroupIDList = fmap readRelGroupID . getElementByName "release-group-list" . elContent
         where
-                readRelGroupID = undefined
+                readRelGroupID :: Element -> [String]
+                readRelGroupID = mapMaybe (getElemAttrVal "id") . filterAlbums . mapMaybe checkRelGroup . elContent
+
+                checkRelGroup = (=<<) (checkTag "release-group") . getElement
+
+                filterAlbums = filter isAlbum
+                isAlbum = (==) "Album" . fromMaybe "" . getElemAttrVal "type"
 
 -- |Get artist name from artist xml tag
-getArtistTagList :: Element -> Maybe Tag
-getArtistTagList (Element {elContent=cont}) = readTagList =<< getElementByName "tag-list" cont
+getArtistTagList :: Element -> Maybe [Tag]
+getArtistTagList = fmap readTagList . getElementByName "tag-list" . elContent
         where
-                readTagList = undefined
+                readTagList :: Element -> [Tag]
+                readTagList = mapMaybe (maybePair . readTag ) . mapMaybe checkTagTag . elContent
+
+                checkTagTag = (=<<) (checkTag "tag") . getElement
+
+                readTag = getElemText "name" &&& (fmap read . getElemAttrVal "count")
 
 
 {- Get Content actual values functions -}
@@ -119,22 +144,14 @@ getAttrByName attr = find ((==) attr . getAttrName)
 
 -- |Get Attribute name
 getAttrName :: Attr -> String
-getAttrName (Attr {attrKey=(QName {qName=name})}) = name
-
--- |Get Attribute value
-getAttrVal :: Attr -> String
-getAttrVal (Attr {attrVal=val}) = val
+getAttrName = qName . attrKey
 
 
 {- Element content functions -}
 
--- |Get Element contents
-getElementContents :: Element -> [Content]
-getElementContents (Element {elContent=conts}) = conts
-
 -- |Get Element name
 getElementName :: Element -> String
-getElementName (Element {elName=(QName {qName=name})}) = name
+getElementName = qName . elName
 
 -- |Check if current element is a tag with the given name
 checkTag :: String -> Element -> Maybe Element
@@ -144,15 +161,17 @@ checkTag str e
 
 -- |Read the Text from element content
 readTagText :: Element -> Maybe String
-readTagText (Element {elContent=[Text cd]}) = Just $ getDataContent cd
+readTagText (Element {elContent=[Text cd]}) = Just $ cdData cd
 readTagText _ = Nothing
 
+getElemAttrVal :: String -> Element -> Maybe String
+getElemAttrVal attr = fmap attrVal . getAttrByName attr . elAttribs
+
+getElemText :: String -> Element -> Maybe String
+getElemText elem = (=<<) readTagText . getElementByName elem . elContent
 
 {- Data content functions -}
 
--- |Get Data content
-getDataContent :: CData -> String
-getDataContent (CData {cdData=d}) = d
 
 
 {- General helper functions -}
