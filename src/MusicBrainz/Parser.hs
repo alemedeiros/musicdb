@@ -6,7 +6,7 @@
 -- XML parser submodule
 
 -- |Contains functions for XML parsing of the MusicBrainz XML data
-module MusicBrainz.Parser (getSearchResult, getArtistLookupResult) where
+module MusicBrainz.Parser (getSearchResult, getArtistLookupResult, getRelGLookupResult) where
 
 import Control.Arrow
 import Control.Applicative
@@ -26,15 +26,12 @@ import Text.XML.HaXml.Posn
 getSearchResult :: String -> [(String, String)]
 getSearchResult = readInfo . artistListFromSearch . parseContents
         where
-                parseContents = xmlContents . xmlParse "musicdb.err"
                 readInfo = mapMaybe (maybePair . (getArtistID &&& getArtistName))
 
 -- |Parse artist informations from MusicBrainz's lookup XML
 getArtistLookupResult :: String -> Maybe Artist
 getArtistLookupResult = (=<<) readArtistData . artistFromLookup . parseContents
         where
-                parseContents = xmlContents . xmlParse "musicdb.err"
-
                 -- Read artist information from artist xml tag
                 readArtistData :: Content Posn -> Maybe Artist
                 readArtistData e
@@ -49,6 +46,23 @@ getArtistLookupResult = (=<<) readArtistData . artistFromLookup . parseContents
                                 jId = fromJust id
                                 jName = fromJust name
 
+-- |Parse artist informations from MusicBrainz's lookup XML
+getRelGLookupResult :: String -> Maybe ReleaseGroup
+getRelGLookupResult = (=<<) readRelGData . relgFromLookup . parseContents
+        where
+                -- Read release-group information from xml tag
+                readRelGData :: Content Posn -> Maybe ReleaseGroup
+                readRelGData e
+                        | isNothing id = Nothing
+                        | isNothing title = Nothing
+                        | otherwise = Just $ ReleaseGroup jId jTitle tags
+                        where
+                                id = getRelGID e
+                                title = getRelGTitle e
+                                tags = getRelGTagList e
+                                jId = fromJust id
+                                jTitle = fromJust title
+
 {- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base search XML
@@ -62,6 +76,12 @@ artistListFromSearch = tag "metadata" /> tag "artist-list" /> tag "artist"
 -- Assume there will be only one artist tag
 artistFromLookup :: Content Posn -> Maybe (Content Posn)
 artistFromLookup = uniList . (tag "metadata" /> tag "artist")
+
+-- |Get release group from base lookup XML
+--
+-- Assume there will be only one release-group tag
+relgFromLookup :: Content Posn -> Maybe (Content Posn)
+relgFromLookup = uniList . (tag "metadata" /> tag "release-group")
 
 -- |Get artist name from artist xml tag
 --
@@ -90,6 +110,24 @@ getArtistTagList = mapMaybe readTag . getTags
         where
                 getTags = tag "artist" /> tag "tag-list" /> tag "tag"
 
+-- |Get release group title from release-group xml tag
+--
+-- Release Groups should have one, and only one, title
+getRelGTitle :: Content Posn -> Maybe String
+getRelGTitle = uniList . name
+        where
+                name = map verbatim . (tag "release-group" /> tag "title" /> txt)
+
+-- |Get release group id from release-group xml tag
+getRelGID :: Content Posn -> Maybe String
+getRelGID = getAttrValByName "id"
+
+-- |Get artist tag lis from artist xml tag
+getRelGTagList :: Content Posn -> [Tag]
+getRelGTagList = mapMaybe readTag . getTags
+        where
+                getTags = tag "release-group" /> tag "tag-list" /> tag "tag"
+
 -- |Read Tag from xml tag
 readTag :: Content Posn -> Maybe Tag
 readTag = maybePair . (tagName &&& tagCount)
@@ -99,6 +137,9 @@ readTag = maybePair . (tagName &&& tagCount)
 
 
 {- XML generic helper functions -}
+
+parseContents :: String -> Content Posn
+parseContents = xmlContents . xmlParse "musicdb.err"
 
 -- |Get Attribute list from an Element
 getElemAttrs :: Element a -> [Attribute]
