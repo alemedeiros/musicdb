@@ -15,8 +15,9 @@ import Data.List
 import Data.Maybe
 
 import MusicBrainz.Database
-import MusicBrainz.URI
 import MusicBrainz.Parser
+import MusicBrainz.Types
+import MusicBrainz.URI
 
 import Network.HTTP
 import Network.URI
@@ -42,8 +43,11 @@ getArtistInfo art lim = do
                         case artData of
                                 Nothing -> return $ "Artist found but could not parse xml\n\n" ++ artLookup
                                 Just a -> do
-                                        insertArtist "music.db" a
-                                        return $ "Artist found\n\n" ++ show a
+                                        relLookup <- mapM (uriDownload . uriLookupRelGroup) $ artRelGroupIDList a
+                                        let
+                                            rels = mapMaybe getRelGLookupResult relLookup
+                                        insertArtist "music.db" (a, rels)
+                                        return $ "Artist found\n\n" ++ show a ++ "\n\nReleases:\n" ++ foldl (\l e -> l ++ show e ++ "\n\n") "" rels
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

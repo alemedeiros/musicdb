@@ -25,16 +25,17 @@ createDB dbFile = do
 
         -- Create tables
         run conn "CREATE TABLE artists (id TEXT, name TEXT NOT NULL, PRIMARY KEY (id))" []
-        run conn "CREATE TABLE tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES artists(id))" []
-        --run conn "CREATE TABLE release (art_id TEXT NOT NULL, alb_id TEXT NOT NULL, FOREIGN KEY (art_id) REFERENCES artists(id), FOREIGN KEY (alb_id) REFERENCES albums(id))" []
-        run conn "CREATE TABLE releases (art_id TEXT NOT NULL, alb_id TEXT NOT NULL, FOREIGN KEY (art_id) REFERENCES artists(id))" []
+        run conn "CREATE TABLE art_tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES artists(id))" []
+        run conn "CREATE TABLE releases (id TEXT, title TEXT NOT NULL, PRIMARY KEY (id))" []
+        run conn "CREATE TABLE rel_tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES releases(id))" []
+        run conn "CREATE TABLE art_rel (art_id TEXT NOT NULL, rel_id TEXT NOT NULL, FOREIGN KEY (art_id) REFERENCES artists(id), FOREIGN KEY (rel_id) REFERENCES releases(id))" []
         commit conn
         disconnect conn
 
 -- |Insert an artist to the Database File
 -- TODO: also add releases (probably should receive a list of releases)
-insertArtist :: String -> Artist -> IO ()
-insertArtist dbFile (Artist id name rels tags) = do
+insertArtist :: String -> (Artist, [ReleaseGroup]) -> IO ()
+insertArtist dbFile (Artist id name rels tags, rels') = do
         -- TODO check if dbFile has necessary tables
         conn <- connectSqlite3 dbFile
 
@@ -44,17 +45,21 @@ insertArtist dbFile (Artist id name rels tags) = do
         artStmt <- prepare conn "INSERT INTO artists (id, name) VALUES (?,?)"
         execute artStmt [ toSql id, toSql name ]
 
-        -- TODO Insert releases info
+        -- Insert releases info
+        relgStmt <- prepare conn "INSERT INTO releases (id, title) VALUES (?,?)"
+        executeMany relgStmt $ map prepareRelGArg rels'
 
         -- Insert artist releases
-        relStmt <- prepare conn "INSERT INTO releases (art_id, alb_id) VALUES (?,?)"
-        executeMany relStmt . map relArg $ rels
+        atrStmt <- prepare conn "INSERT INTO art_rel (art_id, rel_id) VALUES (?,?)"
+        executeMany atrStmt $ map relArg rels
 
         -- Insert artist tags
-        tagStmt <- prepare conn "INSERT INTO tags (id, name, count) VALUES (?,?,?)"
-        executeMany tagStmt . map (prepareTagArg id) $ tags
+        tagStmt <- prepare conn "INSERT INTO art_tags (id, name, count) VALUES (?,?,?)"
+        executeMany tagStmt $ map (prepareTagArg id) tags
 
-        -- TODO Insert releases tags
+        -- Insert releases tags
+        tagStmt' <- prepare conn "INSERT INTO rel_tags (id, name, count) VALUES (?,?,?)"
+        executeMany tagStmt' $ relGTagList rels'
 
         commit conn
         disconnect conn
@@ -65,3 +70,11 @@ insertArtist dbFile (Artist id name rels tags) = do
 -- reference
 prepareTagArg :: String -> Tag -> [SqlValue]
 prepareTagArg id (t,c) = [ toSql id, toSql t, toSql c ]
+
+-- |Prepare a ReleaseGroupd to SqlValues used on the releases table using the
+-- given id as reference
+prepareRelGArg :: ReleaseGroup -> [SqlValue]
+prepareRelGArg (ReleaseGroup id title _) = [ toSql id, toSql title ]
+
+relGTagList :: [ReleaseGroup] -> [[SqlValue]]
+relGTagList = concatMap (\(ReleaseGroup id _ t) -> map (prepareTagArg id) t)
