@@ -14,6 +14,7 @@ import Data.Char
 import Data.List
 import Data.Maybe
 
+import MusicBrainz.Database
 import MusicBrainz.URI
 import MusicBrainz.Parser
 
@@ -39,7 +40,8 @@ getArtistInfo art lim = do
                             artData = getArtistLookupResult artLookup
                         case artData of
                                 Nothing -> return $ "Artist found but could not parse xml\n\n" ++ artLookup
-                                Just a -> do -- TODO insert to database!
+                                Just a -> do
+                                        insertArtist "music.db" a
                                         return $ "Artist found\n\n" ++ show a
 
 -- |Search for the artist data by the artist name, limiting the number of

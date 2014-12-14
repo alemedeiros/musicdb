@@ -14,7 +14,7 @@ module MusicBrainz.Types where
 data Artist = Artist
         { artID :: String
         , artName :: String
-        , artRelGroupsIDList :: [String]
+        , artRelGroupIDList :: [String]
         , artTagList :: [Tag]
         --, artCountry :: Maybe String
         --, artArea :: Maybe Area

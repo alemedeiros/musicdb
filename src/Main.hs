@@ -26,7 +26,11 @@ import System.IO
 main :: IO ()
 main = do args <- getArgs
           case args of
-                  ("init":_) -> createDB "music.db"
+                  ("init":opt) -> do
+                          let
+                              optMap = optParse opt
+                              dbFile = fromJust $ Map.lookup "dbfile" optMap
+                          createDB dbFile
                   ("add":art:opt) -> do
                           let
                               optMap = optParse opt
@@ -62,7 +66,11 @@ optParse = fillDefaultOpt defaultOptions . optParseAux
         where
                 optParseAux [] = Map.empty
                 optParseAux ("--id":opt) = Map.insert "id" "True" $ optParseAux opt
+                optParseAux ("-i":opt) = Map.insert "id" "True" $ optParseAux opt
                 optParseAux ("--lim":lim:opt) = Map.insert "lim" lim $ optParseAux opt
+                optParseAux ("-l":lim:opt) = Map.insert "lim" lim $ optParseAux opt
+                optParseAux ("--dbfile":file:opt) = Map.insert "dbfile" file $ optParseAux opt
+                optParseAux ("-f":file:opt) = Map.insert "dbfile" file $ optParseAux opt
                 optParseAux opt = error $ "couldn't parse arguments -- " ++ show opt
 
 -- |Fill the option map with the default option for options not specified
@@ -74,7 +82,7 @@ fillDefaultOpt ((k,v):def) opt
 
 -- | Default options
 defaultOptions :: [(String, String)]
-defaultOptions = [ ("id", "False"), ("lim", "4") ]
+defaultOptions = [ ("id", "False"), ("lim", "4") , ("dbfile", "music.db") ]
 
 
 {- Useful printing functions -}
