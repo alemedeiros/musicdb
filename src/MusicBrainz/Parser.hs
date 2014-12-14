@@ -52,6 +52,7 @@ getArtistLookupResult = (=<<) readArtistData . artistFromLookup . parseContents
 {- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base search XML
+--
 -- Return a list of Content, where each content is an artist tag element
 artistListFromSearch :: Content Posn -> [Content Posn]
 artistListFromSearch = tag "metadata" /> tag "artist-list" /> tag "artist"
@@ -70,26 +71,26 @@ getArtistName = uniList . names
         where
                 names = map verbatim . (tag "artist" /> tag "name" /> txt)
 
+-- |Get artist id from artist xml tag
 getArtistID :: Content Posn -> Maybe String
 getArtistID = getAttrValByName "id"
 
 -- |Get artist release group id list from artist xml tag
 --
 -- Artist should have one, and only one, name
--- TODO: filter albuns only (?)
+-- TODO: filter albums (?)
 getArtistRelGroupIDList :: Content Posn -> [String]
 getArtistRelGroupIDList = mapMaybe (getAttrValByName "id") . getRelG
         where
                 getRelG = tag "artist" /> tag "release-group-list" /> tag "release-group"
 
-
-
+-- |Get artist tag lis from artist xml tag
 getArtistTagList :: Content Posn -> [Tag]
 getArtistTagList = mapMaybe readTag . getTags
         where
                 getTags = tag "artist" /> tag "tag-list" /> tag "tag"
 
--- |Read Tag tag
+-- |Read Tag from xml tag
 readTag :: Content Posn -> Maybe Tag
 readTag = maybePair . (tagName &&& tagCount)
         where
@@ -99,6 +100,7 @@ readTag = maybePair . (tagName &&& tagCount)
 
 {- XML generic helper functions -}
 
+-- |Get Attribute list from an Element
 getElemAttrs :: Element a -> [Attribute]
 getElemAttrs (Elem _ attr _) = attr
 
@@ -106,6 +108,7 @@ getElemAttrs (Elem _ attr _) = attr
 xmlContents :: Document Posn -> Content Posn
 xmlContents (Document _ _ e _) = CElem e noPos
 
+-- |Get The Element from content if it is a CElem
 getElement :: Content a -> Maybe (Element a)
 getElement (CElem e _) = Just e
 getElement _ = Nothing
@@ -130,6 +133,7 @@ getAttrValByName name = (=<<) ((=<<) checkAttr . find (compName name)) . fmap ge
 {- General helper functions -}
 
 -- |If a list has only one element, return it
+--
 -- Used for tag elements which should be unique
 uniList :: [a] -> Maybe a
 uniList [x] = Just x
