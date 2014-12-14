@@ -22,8 +22,12 @@ data Artist = Artist
 
 -- Pretty print for Artist
 instance Show Artist where
-        show (Artist id name rels tags) = "Artist: " ++ name  ++ "\nid: " ++ id
-                ++ "\ntags: " ++ show tags ++ "\nalbums (id): " ++ show rels
+        show (Artist id name rels tags) = "Artist:\t" ++ name  ++ "\nid:\t" ++ id
+                ++ "\ntags:\n" ++ foldl (\l -> listStr l . show) "" tags
+                ++ "\nalbums (id):\n" ++ foldl listStr "" rels
+                        where
+                                listStr :: String -> String -> String
+                                listStr l e = l ++ "\t" ++ e ++ "\n"
 
 -- |Release-Group datatype
 -- TODO Datatype description
@@ -34,6 +38,14 @@ data ReleaseGroup = ReleaseGroup
         -- , relType :: String -- probably gonna filter only Albuns
         -- , relArtistID :: String
         , relTagList :: [Tag]
-        } deriving (Show)
+        }
+
+-- Pretty print for Release-Group
+instance Show ReleaseGroup where
+        show (ReleaseGroup id title tags) = "Release:\t" ++ title  ++ "\nid:\t" ++ id
+                ++ "\ntags:\n" ++ foldl (\l -> listStr l . show) "" tags
+                        where
+                                listStr :: String -> String -> String
+                                listStr l e = l ++ "\t" ++ e ++ "\n"
 
 type Tag = (String, Int)
