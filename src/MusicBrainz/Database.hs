@@ -63,5 +63,5 @@ insertArtist dbFile (Artist id name rels tags) = do
 
 -- |Prepare a Tag to SqlValues used on the tags table using the given id as
 -- reference
-prepareTagArg :: String -> Tag -> [SqlValues]
+prepareTagArg :: String -> Tag -> [SqlValue]
 prepareTagArg id (t,c) = [ toSql id, toSql t, toSql c ]
