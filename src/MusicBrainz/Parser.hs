@@ -16,169 +16,124 @@ import Data.Maybe
 
 import MusicBrainz.Types
 
-import Text.XML.Light.Input
-import Text.XML.Light.Types
+import Text.XML.HaXml hiding (find)
+import Text.XML.HaXml.Posn
 
 
 {- Exported functions -}
 
 -- |Parse artist ID from MusicBrainz's search XML
 getSearchResult :: String -> [(String, String)]
-getSearchResult = maybe [] (mapMaybe idFromArtist) . artistList
+getSearchResult = readInfo . artistListFromSearch . parseContents
         where
-                artistList = getArtistListFromSearch . parseXML . removeHeader
-
-                -- Read artist ID from artist content element of xml
-                idFromArtist :: Content -> Maybe (String, String)
-                idFromArtist = readTagInfo . fromContent
-
-                -- Remove from Content datatype and check tag
-                fromContent = (=<<) (checkTag "artist") . getElement
-                -- Get ID and name from artist element
-                readTagInfo = (=<<) (maybePair . (getArtistID &&& getArtistName))
+                parseContents = xmlContents . xmlParse "musicdb.err"
+                readInfo = mapMaybe (maybePair . (getArtistID &&& getArtistName))
 
 -- |Parse artist informations from MusicBrainz's lookup XML
 getArtistLookupResult :: String -> Maybe Artist
-getArtistLookupResult = (=<<) readArtistData . artistData
+getArtistLookupResult = (=<<) readArtistData . artistFromLookup . parseContents
         where
-                artistData = getArtistListFromLookup . parseXML . removeHeader
+                parseContents = xmlContents . xmlParse "musicdb.err"
 
                 -- Read artist information from artist xml tag
-                readArtistData :: Element -> Maybe Artist
+                readArtistData :: Content Posn -> Maybe Artist
                 readArtistData e
                         | isNothing id = Nothing
                         | isNothing name = Nothing
-                        | isNothing relg = Nothing
-                        | isNothing tags = Nothing
-                        | otherwise = Just $ Artist jId jName jRelg jTags
+                        | otherwise = Just $ Artist jId jName rels tags
                         where
                                 id = getArtistID e
                                 name = getArtistName e
-                                relg = getArtistRelGroupIDList e
+                                rels = getArtistRelGroupIDList e
                                 tags = getArtistTagList e
                                 jId = fromJust id
                                 jName = fromJust name
-                                jRelg = fromJust relg
-                                jTags = fromJust tags
-
 
 {- MusicBrainz XML structure aware functions -}
 
 -- |Get artist list from base search XML
-getArtistListFromSearch :: [Content] -> Maybe [Content]
-getArtistListFromSearch [Elem e] = auxSearch . elContent =<< checkTag "metadata" e
-       where
-               auxSearch :: [Content] -> Maybe [Content]
-               auxSearch [Elem e'] = elContent <$> checkTag "artist-list" e'
-getArtistListFromSearch _ = Nothing
+-- Return a list of Content, where each content is an artist tag element
+artistListFromSearch :: Content Posn -> [Content Posn]
+artistListFromSearch = tag "metadata" /> tag "artist-list" /> tag "artist"
 
 -- |Get artist from base lookup XML
-getArtistListFromLookup :: [Content] -> Maybe Element
-getArtistListFromLookup [Elem e] = auxLookup . elContent =<< checkTag "metadata" e
-       where
-               auxLookup :: [Content] -> Maybe Element
-               auxLookup [Elem e'] = checkTag "artist" e'
-getArtistListFromLookup _ = Nothing
-
--- |Get artist ID from artist xml tag
-getArtistID :: Element -> Maybe String
-getArtistID = getElemAttrVal "id"
+--
+-- Assume there will be only one artist tag
+artistFromLookup :: Content Posn -> Maybe (Content Posn)
+artistFromLookup = uniList . (tag "metadata" /> tag "artist")
 
 -- |Get artist name from artist xml tag
-getArtistName :: Element -> Maybe String
-getArtistName = getElemText "name"
-
--- |Get artist name from artist xml tag
-getArtistRelGroupIDList :: Element -> Maybe [String]
-getArtistRelGroupIDList = fmap readRelGroupID . getElementByName "release-group-list" . elContent
+--
+-- Artist should have one, and only one, name
+getArtistName :: Content Posn -> Maybe String
+getArtistName = uniList . names
         where
-                readRelGroupID :: Element -> [String]
-                readRelGroupID = mapMaybe (getElemAttrVal "id") . filterAlbums . mapMaybe checkRelGroup . elContent
+                names = map verbatim . (tag "artist" /> tag "name" /> txt)
 
-                checkRelGroup = (=<<) (checkTag "release-group") . getElement
+getArtistID :: Content Posn -> Maybe String
+getArtistID = getAttrValByName "id"
 
-                filterAlbums = filter isAlbum
-                isAlbum = (==) "Album" . fromMaybe "" . getElemAttrVal "type"
-
--- |Get artist name from artist xml tag
-getArtistTagList :: Element -> Maybe [Tag]
-getArtistTagList = fmap readTagList . getElementByName "tag-list" . elContent
+-- |Get artist release group id list from artist xml tag
+--
+-- Artist should have one, and only one, name
+-- TODO: filter albuns only (?)
+getArtistRelGroupIDList :: Content Posn -> [String]
+getArtistRelGroupIDList = mapMaybe (getAttrValByName "id") . getRelG
         where
-                readTagList :: Element -> [Tag]
-                readTagList = mapMaybe (maybePair . readTag ) . mapMaybe checkTagTag . elContent
-
-                checkTagTag = (=<<) (checkTag "tag") . getElement
-
-                readTag = getElemText "name" &&& (fmap read . getElemAttrVal "count")
+                getRelG = tag "artist" /> tag "release-group-list" /> tag "release-group"
 
 
-{- Get Content actual values functions -}
 
--- |Get Element from Content
-getElement :: Content -> Maybe Element
-getElement (Elem e) = Just e
+getArtistTagList :: Content Posn -> [Tag]
+getArtistTagList = mapMaybe readTag . getTags
+        where
+                getTags = tag "artist" /> tag "tag-list" /> tag "tag"
+
+-- |Read Tag tag
+readTag :: Content Posn -> Maybe Tag
+readTag = maybePair . (tagName &&& tagCount)
+        where
+                tagName = uniList . map verbatim . (tag "tag" /> tag "name" /> txt)
+                tagCount = fmap read . getAttrValByName "count"
+
+
+{- XML generic helper functions -}
+
+getElemAttrs :: Element a -> [Attribute]
+getElemAttrs (Elem _ attr _) = attr
+
+-- |Get Contents from HaXml Document
+xmlContents :: Document Posn -> Content Posn
+xmlContents (Document _ _ e _) = CElem e noPos
+
+getElement :: Content a -> Maybe (Element a)
+getElement (CElem e _) = Just e
 getElement _ = Nothing
 
--- |Get Data from Content
-getData :: Content -> Maybe CData
-getData (Text d) = Just d
-getData _ = Nothing
+-- |Find an attribute from the list of attributes by name
+--
+-- Expect attribute to have only one value
+getAttrValByName :: String -> Content a -> Maybe String
+getAttrValByName name = (=<<) ((=<<) checkAttr . find (compName name)) . fmap getElemAttrs . getElement
+        where
+                compName str (N n,_) = n == str
+                compName _ _ = False
 
--- |Get CRef from Content
-getCRef :: Content -> Maybe String
-getCRef (CRef r) = Just r
-getCRef _ = Nothing
+                checkAttr :: Attribute -> Maybe String
+                checkAttr (_, AttValue vals) = checkAttrAux =<< uniList vals
 
-
-{- Content functions -}
-
--- |Find an elment on an content list and return
-getElementByName :: String -> [Content] -> Maybe Element
-getElementByName name = find ((==) name . getElementName) . mapMaybe getElement
-
-{- Attribute content functions -}
-
--- |Find an attribute on an attribute list and return its value
-getAttrByName :: String -> [Attr] -> Maybe Attr
-getAttrByName attr = find ((==) attr . getAttrName)
-
--- |Get Attribute name
-getAttrName :: Attr -> String
-getAttrName = qName . attrKey
-
-
-{- Element content functions -}
-
--- |Get Element name
-getElementName :: Element -> String
-getElementName = qName . elName
-
--- |Check if current element is a tag with the given name
-checkTag :: String -> Element -> Maybe Element
-checkTag str e
-        | getElementName e /= str = Nothing
-        | otherwise = Just e
-
--- |Read the Text from element content
-readTagText :: Element -> Maybe String
-readTagText (Element {elContent=[Text cd]}) = Just $ cdData cd
-readTagText _ = Nothing
-
-getElemAttrVal :: String -> Element -> Maybe String
-getElemAttrVal attr = fmap attrVal . getAttrByName attr . elAttribs
-
-getElemText :: String -> Element -> Maybe String
-getElemText elem = (=<<) readTagText . getElementByName elem . elContent
-
-{- Data content functions -}
-
+                checkAttrAux :: Either String Reference -> Maybe String
+                checkAttrAux (Left v) = Just v
+                checkAttrAux _ = Nothing
 
 
 {- General helper functions -}
 
--- |Remove xml version header
-removeHeader :: String -> String
-removeHeader = tail . dropWhile (/= '>')
+-- |If a list has only one element, return it
+-- Used for tag elements which should be unique
+uniList :: [a] -> Maybe a
+uniList [x] = Just x
+uniList _ = Nothing
 
 -- |Transform a Pair of Maybe to a Maybe of a Pair
 maybePair :: (Maybe a, Maybe b) -> Maybe (a,b)
