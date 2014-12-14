@@ -29,12 +29,27 @@ uriSearchArtist art lim = URI
 -- Assume the id is valid
 --
 -- The format of the artist search is:
--- http://musicbrainz.org/ws/2/artist/<id>?inc=releases+recordings+tags
+-- http://musicbrainz.org/ws/2/artist/<id>?inc=release-groups++tags
 uriLookupArtist :: String -> URI
 uriLookupArtist id = URI
         { uriScheme = "http:"
         , uriAuthority = Just $ URIAuth "" "musicbrainz.org" ""
         , uriPath = "/ws/2/artist/" ++ id
         , uriQuery = "?inc=release-groups+tags"
+        , uriFragment = ""
+        }
+
+-- |Build the URI for a lookup request with the given release group id
+--
+-- Assume the id is valid
+--
+-- The format of the artist search is:
+-- http://musicbrainz.org/ws/2/release-group/<id>?inc=releases+recordings+tags
+uriLookupRelGroup :: String -> URI
+uriLookupRelGroup id = URI
+        { uriScheme = "http:"
+        , uriAuthority = Just $ URIAuth "" "musicbrainz.org" ""
+        , uriPath = "/ws/2/release-group/" ++ id
+        , uriQuery = "?inc=tags"
         , uriFragment = ""
         }
