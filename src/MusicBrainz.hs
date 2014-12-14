@@ -24,6 +24,7 @@ import Network.URI
 type URL = String
 
 -- |Get the information XML for the artist with the ID specified on the string.
+-- TODO Add dbFile option
 getArtistInfo :: String -> Int -> IO String
 getArtistInfo art lim = do
         srchList <- searchArtist art lim
