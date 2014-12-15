@@ -13,6 +13,7 @@ module MusicBrainz (
         getArtistInfoByID,
         searchArtist,
         module MusicBrainz.Database,
+        module MusicBrainz.Errors,
         module MusicBrainz.Types,
 ) where
 
@@ -21,6 +22,7 @@ import Data.List
 import Data.Maybe
 
 import MusicBrainz.Database
+import MusicBrainz.Errors
 import MusicBrainz.Parser
 import MusicBrainz.Types
 import MusicBrainz.URI

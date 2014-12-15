@@ -86,22 +86,3 @@ fillDefaultOpt ((k,v):def) opt
 -- | Default options
 defaultOptions :: [(String, String)]
 defaultOptions = [ ("id", "False"), ("lim", "4") , ("dbfile", "music.db") ]
-
-
-{- Useful printing functions -}
-
--- |Print error messages, prepended by the program name (musicdb).
-printError :: String -> IO ()
-printError = hPutStrLn stderr . (++) "musicdb: "
-
--- |Suggest help command.
-suggestHelp :: IO ()
-suggestHelp = hPutStrLn stderr "Try 'musicdb help' for more information."
-
--- |Print help message.
-printHelp :: IO ()
-printHelp = putStrLn "Usage: MusicDB command [args]\n\
-        \\n\
-        \init               Initialize the database music.db\n\
-        \add artist         \n\
-        \usage | help       Print this help message\n"
