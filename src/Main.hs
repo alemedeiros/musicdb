@@ -9,7 +9,6 @@ import qualified Data.Map as Map
 import Data.Maybe
 
 import MusicBrainz
-import MusicBrainz.Database
 
 import System.Environment
 import System.IO
@@ -35,7 +34,11 @@ main = do args <- getArgs
                           let
                               optMap = optParse opt
                               lim = read . fromJust $ Map.lookup "lim" optMap
-                          artInfo <- getArtistInfo art lim
+                              dbFile = fromJust $ Map.lookup "dbfile" optMap
+                              byID = read . fromJust $ Map.lookup "id" optMap
+                          artInfo <- if byID
+                                        then getArtistInfo dbFile art lim
+                                        else getArtistInfoByID dbFile art
                           putStrLn artInfo
                   ("search":art:opt) -> do
                           let
@@ -57,7 +60,6 @@ main = do args <- getArgs
                           printError $ "undefided arguments -- " ++ show args
                           suggestHelp
 
-
 {- Command-line parsing -}
 
 -- |Parse options arguments
@@ -73,7 +75,8 @@ optParse = fillDefaultOpt defaultOptions . optParseAux
                 optParseAux ("-f":file:opt) = Map.insert "dbfile" file $ optParseAux opt
                 optParseAux opt = error $ "couldn't parse arguments -- " ++ show opt
 
--- |Fill the option map with the default option for options not specified
+-- |Fill the option map with the 'defaultOption' for options not specified by
+-- the user
 fillDefaultOpt :: [(String,String)] -> Map String String -> Map String String
 fillDefaultOpt [] opt = opt
 fillDefaultOpt ((k,v):def) opt

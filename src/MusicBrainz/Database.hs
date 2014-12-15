@@ -29,11 +29,11 @@ createDB dbFile = do
         run conn "CREATE TABLE releases (id TEXT, title TEXT NOT NULL, PRIMARY KEY (id))" []
         run conn "CREATE TABLE rel_tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES releases(id))" []
         run conn "CREATE TABLE art_rel (art_id TEXT NOT NULL, rel_id TEXT NOT NULL, FOREIGN KEY (art_id) REFERENCES artists(id), FOREIGN KEY (rel_id) REFERENCES releases(id))" []
+
         commit conn
         disconnect conn
 
 -- |Insert an artist to the Database File
--- TODO: also add releases (probably should receive a list of releases)
 insertArtist :: String -> (Artist, [ReleaseGroup]) -> IO ()
 insertArtist dbFile (Artist id name rels tags, rels') = do
         -- TODO check if dbFile has necessary tables
