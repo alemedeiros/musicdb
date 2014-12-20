@@ -4,6 +4,8 @@
 -- Main file for musicdb, a MusicBrainz based artist information database
 -- application
 
+module Main where
+
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
@@ -11,17 +13,20 @@ import Data.Maybe
 import MusicBrainz
 
 import System.Environment
-import System.IO
 
 -- |The main function provides TODO different functionalities:
 --
---  [@init@] will initialize the database music.db
+--  [@init@]
+--  Initialize local database
 --
---  [@add artist@] will download the artist information with it's releases and
---  add to the database
+--  [@add artist@]
+--  Download the artist information with it's releases and add to local database
 --
---  [@search artist@] will search MusicBrainz database for the given artist and
---  print the top results
+--  [@search artist@]
+--  Search MusicBrainz database for the given artist and print the top results
+--
+--  [@genplaylist artist album@]
+--  Generate a playlist of similar (local) albums, starting with the given album
 main :: IO ()
 main = do args <- getArgs
           case args of
@@ -83,6 +88,6 @@ fillDefaultOpt ((k,v):def) opt
         | Map.notMember k opt = Map.insert k v $ fillDefaultOpt def opt
         | otherwise = fillDefaultOpt def opt
 
--- | Default options
+-- |Default options definition
 defaultOptions :: [(String, String)]
 defaultOptions = [ ("id", "False"), ("lim", "4") , ("dbfile", "music.db") ]
