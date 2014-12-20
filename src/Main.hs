@@ -42,8 +42,8 @@ main = do args <- getArgs
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
                               byID = read . fromJust $ Map.lookup "id" optMap
                           artInfo <- if byID
-                                        then getArtistInfo dbFile art lim
-                                        else getArtistInfoByID dbFile art
+                                        then getArtistInfoByID dbFile art
+                                        else getArtistInfo dbFile art lim
                           putStrLn artInfo
                   ("search":art:opt) -> do
                           let
