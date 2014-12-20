@@ -72,7 +72,7 @@ searchArtist art lim = do
         return $ getSearchResult srch
 
 -- |Download a given uri and return its content as a String
--- TODO: return error in a better way
+-- TODO: return error in a better way (i.e Either or Maybe)
 uriDownload :: URI -> IO String
 uriDownload uri = do
         resp <- simpleHTTP request

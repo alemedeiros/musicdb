@@ -9,8 +9,8 @@
 module MusicBrainz.Types where
 
 -- |Artist datatype
+--
 -- TODO Datatype description
--- TODO possibly useful fields left commented and nonessential fields are Maybe
 data Artist = Artist
         { artID :: String
         , artName :: String
@@ -30,8 +30,8 @@ instance Show Artist where
                                 listStr l e = l ++ "\t" ++ e ++ "\n"
 
 -- |Release-Group datatype
+--
 -- TODO Datatype description
--- TODO possibly useful fields left commented and nonessential fields are Maybe
 data ReleaseGroup = ReleaseGroup
         { relID :: String
         , relTitle :: String
