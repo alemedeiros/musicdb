@@ -14,7 +14,7 @@ import MusicBrainz
 
 import System.Environment
 
--- |The main function provides TODO different functionalities:
+-- |The main function provides 5 different functionalities:
 --
 --  [@init@]
 --  Initialize local database
@@ -25,11 +25,11 @@ import System.Environment
 --  [@search artist@]
 --  Search MusicBrainz database for the given artist and print the top results
 --
---  [@genplaylist artist album@]
---  Generate a playlist of similar (local) albums, starting with the given album
---
---  [@query artist album@]
+--  [@query artist album@] /TODO/
 --  Query the local database for the specified album
+--
+--  [@genplaylist artist album@] /TODO/
+--  Generate a playlist of similar (local) albums, starting with the given album
 main :: IO ()
 main = do args <- getArgs
           case args of
@@ -57,6 +57,16 @@ main = do args <- getArgs
                           case artSearch of
                                   [] -> printError "no artist found"
                                   _ -> mapM_ (\(i,n) -> putStrLn (i ++ "\t" ++ n)) artSearch
+                  ("query":art:alb:opt) -> do
+                          let
+                              optMap = optParse opt
+                              dbFile = fromJust $ Map.lookup "dbfile" optMap
+                          undefined -- TODO: implement
+                  ("genplaylist":art:alb:opt) -> do
+                          let
+                              optMap = optParse opt
+                              dbFile = fromJust $ Map.lookup "dbfile" optMap
+                          undefined -- TODO: implement
                   -- Help commands
                   ("help":_) -> printHelp
                   ("usage":_) -> printHelp
