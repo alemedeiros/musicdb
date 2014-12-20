@@ -27,6 +27,9 @@ import System.Environment
 --
 --  [@genplaylist artist album@]
 --  Generate a playlist of similar (local) albums, starting with the given album
+--
+--  [@query artist album@]
+--  Query the local database for the specified album
 main :: IO ()
 main = do args <- getArgs
           case args of

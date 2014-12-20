@@ -35,15 +35,15 @@ instance Show Artist where
 data ReleaseGroup = ReleaseGroup
         { relID :: String
         , relTitle :: String
-        -- , relType :: String -- probably gonna filter only Albuns
+        , relType :: String
         -- , relArtistID :: String
         , relTagList :: [Tag]
         }
 
 -- Pretty print for Release-Group
 instance Show ReleaseGroup where
-        show (ReleaseGroup id title tags) = "Release:\t" ++ title  ++ "\nid:\t" ++ id
-                ++ "\ntags:\n" ++ foldl (\l -> listStr l . show) "" tags
+        show (ReleaseGroup id title typ tags) = "Release:\t" ++ title  ++ "\nid:\t\t" ++ id
+                ++ "\ntype:\t\t" ++ typ ++ "\ntags:\n" ++ foldl (\l -> listStr l . show) "" tags
                         where
                                 listStr :: String -> String -> String
                                 listStr l e = l ++ "\t" ++ e ++ "\n"

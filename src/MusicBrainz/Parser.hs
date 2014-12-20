@@ -55,13 +55,15 @@ getRelGLookupResult = (=<<) readRelGData . relgFromLookup . parseContents
                 readRelGData e
                         | isNothing id = Nothing
                         | isNothing title = Nothing
-                        | otherwise = Just $ ReleaseGroup jId jTitle tags
+                        | otherwise = Just $ ReleaseGroup jId jTitle jType tags
                         where
                                 id = getRelGID e
                                 title = getRelGTitle e
+                                typ = getRelGType e
                                 tags = getRelGTagList e
                                 jId = fromJust id
                                 jTitle = fromJust title
+                                jType = fromJust typ
 
 {- MusicBrainz XML structure aware functions -}
 
@@ -83,6 +85,10 @@ artistFromLookup = uniList . (tag "metadata" /> tag "artist")
 relgFromLookup :: Content Posn -> Maybe (Content Posn)
 relgFromLookup = uniList . (tag "metadata" /> tag "release-group")
 
+-- |Get artist id from artist xml tag
+getArtistID :: Content Posn -> Maybe String
+getArtistID = getAttrValByName "id"
+
 -- |Get artist name from artist xml tag
 --
 -- Artist should have one, and only one, name
@@ -91,14 +97,9 @@ getArtistName = uniList . names
         where
                 names = map verbatim . (tag "artist" /> tag "name" /> txt)
 
--- |Get artist id from artist xml tag
-getArtistID :: Content Posn -> Maybe String
-getArtistID = getAttrValByName "id"
-
 -- |Get artist release group id list from artist xml tag
 --
 -- Artist should have one, and only one, name
--- TODO: filter albums (?)
 getArtistRelGroupIDList :: Content Posn -> [String]
 getArtistRelGroupIDList = mapMaybe (getAttrValByName "id") . getRelG
         where
@@ -110,6 +111,10 @@ getArtistTagList = mapMaybe readTag . getTags
         where
                 getTags = tag "artist" /> tag "tag-list" /> tag "tag"
 
+-- |Get release group id from release-group xml tag
+getRelGID :: Content Posn -> Maybe String
+getRelGID = getAttrValByName "id"
+
 -- |Get release group title from release-group xml tag
 --
 -- Release Groups should have one, and only one, title
@@ -118,17 +123,22 @@ getRelGTitle = uniList . name
         where
                 name = map verbatim . (tag "release-group" /> tag "title" /> txt)
 
--- |Get release group id from release-group xml tag
-getRelGID :: Content Posn -> Maybe String
-getRelGID = getAttrValByName "id"
+-- |Get release group type from release-group xml tag
+--
+-- Release Groups should have at least one type: the primary-type tag, which is
+-- the one we will use
+getRelGType :: Content Posn -> Maybe String
+getRelGType = uniList . primType
+        where
+                primType = map verbatim . (tag "release-group" /> tag "primary-type" /> txt)
 
--- |Get artist tag lis from artist xml tag
+-- |Get release group tag list from release-group xml tag
 getRelGTagList :: Content Posn -> [Tag]
 getRelGTagList = mapMaybe readTag . getTags
         where
                 getTags = tag "release-group" /> tag "tag-list" /> tag "tag"
 
--- |Read Tag from xml tag
+-- |Read the artist/release group tag from xml
 readTag :: Content Posn -> Maybe Tag
 readTag = maybePair . (tagName &&& tagCount)
         where
@@ -136,18 +146,19 @@ readTag = maybePair . (tagName &&& tagCount)
                 tagCount = fmap read . getAttrValByName "count"
 
 
-{- XML generic helper functions -}
+{- XML generic helper functions (unaware of actual structure) -}
 
+-- |Parse contents of the xml file into HaXml internal format
 parseContents :: String -> Content Posn
 parseContents = xmlContents . xmlParse "musicdb.err"
-
--- |Get Attribute list from an Element
-getElemAttrs :: Element a -> [Attribute]
-getElemAttrs (Elem _ attr _) = attr
 
 -- |Get Contents from HaXml Document
 xmlContents :: Document Posn -> Content Posn
 xmlContents (Document _ _ e _) = CElem e noPos
+
+-- |Get Attribute list from an Element
+getElemAttrs :: Element a -> [Attribute]
+getElemAttrs (Elem _ attr _) = attr
 
 -- |Get The Element from content if it is a CElem
 getElement :: Content a -> Maybe (Element a)
@@ -156,7 +167,7 @@ getElement _ = Nothing
 
 -- |Find an attribute from the list of attributes by name
 --
--- Expect attribute to have only one value
+-- Assume attribute to have only one value
 getAttrValByName :: String -> Content a -> Maybe String
 getAttrValByName name = (=<<) ((=<<) checkAttr . find (compName name)) . fmap getElemAttrs . getElement
         where

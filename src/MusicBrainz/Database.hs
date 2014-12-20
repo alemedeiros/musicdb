@@ -26,7 +26,7 @@ createDB dbFile = do
         -- Create tables
         run conn "CREATE TABLE artists (id TEXT, name TEXT NOT NULL, PRIMARY KEY (id))" []
         run conn "CREATE TABLE art_tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES artists(id))" []
-        run conn "CREATE TABLE releases (id TEXT, title TEXT NOT NULL, PRIMARY KEY (id))" []
+        run conn "CREATE TABLE releases (id TEXT, title TEXT NOT NULL, type TEXT, PRIMARY KEY (id))" []
         run conn "CREATE TABLE rel_tags (id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL, FOREIGN KEY (id) REFERENCES releases(id))" []
         run conn "CREATE TABLE art_rel (art_id TEXT NOT NULL, rel_id TEXT NOT NULL, FOREIGN KEY (art_id) REFERENCES artists(id), FOREIGN KEY (rel_id) REFERENCES releases(id))" []
 
@@ -46,7 +46,7 @@ insertArtist dbFile (Artist id name rels tags, rels') = do
         execute artStmt [ toSql id, toSql name ]
 
         -- Insert releases info
-        relgStmt <- prepare conn "INSERT INTO releases (id, title) VALUES (?,?)"
+        relgStmt <- prepare conn "INSERT INTO releases (id, title, type) VALUES (?,?,?)"
         executeMany relgStmt $ map prepareRelGArg rels'
 
         -- Insert artist releases
@@ -74,7 +74,7 @@ prepareTagArg id (t,c) = [ toSql id, toSql t, toSql c ]
 -- |Prepare a ReleaseGroupd to SqlValues used on the releases table using the
 -- given id as reference
 prepareRelGArg :: ReleaseGroup -> [SqlValue]
-prepareRelGArg (ReleaseGroup id title _) = [ toSql id, toSql title ]
+prepareRelGArg (ReleaseGroup id title typ _) = [ toSql id, toSql title, toSql typ ]
 
 relGTagList :: [ReleaseGroup] -> [[SqlValue]]
-relGTagList = concatMap (\(ReleaseGroup id _ t) -> map (prepareTagArg id) t)
+relGTagList = concatMap (\(ReleaseGroup id _ _ t) -> map (prepareTagArg id) t)

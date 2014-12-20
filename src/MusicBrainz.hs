@@ -77,7 +77,9 @@ uriDownload :: URI -> IO String
 uriDownload uri = do
         resp <- simpleHTTP request
         case resp of
-                Left x -> return $ "Error connecting: " ++ show x
+                Left x -> do
+                        printError $ "couldn't download page: " ++ show uri ++ "\nReceived follwing error:\n" ++ show x
+                        return ""
                 Right r -> case rspCode r of
                         (2,_,_) -> return $ rspBody r
                         -- TODO check other return codes
