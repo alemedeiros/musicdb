@@ -61,7 +61,8 @@ main = do args <- getArgs
                           let
                               optMap = optParse opt
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
-                          undefined -- TODO: implement
+                          artInfo <- queryArtist dbFile art alb
+                          putStr artInfo
                   ("genplaylist":art:alb:opt) -> do
                           let
                               optMap = optParse opt

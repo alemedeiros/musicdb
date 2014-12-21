@@ -6,7 +6,11 @@
 -- XML parser submodule
 
 -- |Contains functions for XML parsing of the MusicBrainz XML data
-module MusicBrainz.Parser (getSearchResult, getArtistLookupResult, getRelGLookupResult) where
+module MusicBrainz.Parser (
+        getSearchResult,
+        getArtistLookupResult,
+        getRelGLookupResult
+) where
 
 import Control.Arrow
 import Control.Applicative

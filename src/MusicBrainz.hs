@@ -12,6 +12,7 @@ module MusicBrainz (
         getArtistInfo,
         getArtistInfoByID,
         searchArtist,
+        queryArtist,
         module MusicBrainz.Database,
         module MusicBrainz.Errors,
         module MusicBrainz.Types,
@@ -61,6 +62,12 @@ getArtistInfoByID dbFile id = do
                             rels = mapMaybe getRelGLookupResult relLookup
                         insertArtist dbFile (a, rels)
                         return $ "Artist found\n\n" ++ show a ++ "\n\nReleases:\n" ++ foldl (\l e -> l ++ show e ++ "\n\n") "" rels
+
+queryArtist :: String -> String -> String -> IO String
+queryArtist dbFile art alb = do
+        arts <- queryArtistByName dbFile art
+        return $ show arts
+
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

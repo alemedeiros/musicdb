@@ -10,7 +10,10 @@
 --
 -- It is responsible for initializing, storing and querying the local database
 -- file.
-module MusicBrainz.Database (createDB, insertArtist) where
+module MusicBrainz.Database (createDB, insertArtist, queryArtistByName) where
+
+import Data.Char (toLower)
+import Data.Maybe
 
 import Database.HDBC
 import Database.HDBC.Sqlite3
@@ -78,3 +81,54 @@ prepareRelGArg (ReleaseGroup id title typ _) = [ toSql id, toSql title, toSql ty
 
 relGTagList :: [ReleaseGroup] -> [[SqlValue]]
 relGTagList = concatMap (\(ReleaseGroup id _ _ t) -> map (prepareTagArg id) t)
+
+-- |Query an Artist by its name
+-- 
+-- There *may* be more than one artist with the same name (?)
+queryArtistByName :: String -> String -> IO [Artist]
+queryArtistByName dbFile art = do
+        -- TODO check if dbFile has necessary tables
+        conn <- connectSqlite3 dbFile
+        queryData <- quickQuery' conn "SELECT * FROM artists WHERE LOWER(name) = ?" [toSql $ map toLower art]
+
+        mArts <- completeArtist conn queryData
+
+        return $ catMaybes mArts
+
+-- |Query an Artist by its ID
+queryArtistByID :: String -> String -> IO [Artist]
+queryArtistByID dbFile aId = do
+        conn <- connectSqlite3 dbFile
+        queryData <- quickQuery' conn "SELECT * FROM artists WHERE id = ?" [toSql aId]
+
+        mArts <- completeArtist conn queryData
+
+        disconnect conn
+        return $ catMaybes mArts
+
+completeArtist :: IConnection c => c -> [[SqlValue]] -> IO [Maybe Artist]
+completeArtist conn [] = return []
+completeArtist conn (x:xs) = case x of
+        [sqlId, sqlName] -> do
+                sqlRelgs <- quickQuery' conn "SELECT rel_id FROM art_rel WHERE art_id = ?" [ sqlId ]
+                sqlTags <-  quickQuery' conn "SELECT name, count FROM art_tags WHERE id = ?" [ sqlId ]
+
+                let
+                    id = fromSql sqlId
+                    name = fromSql sqlName
+                    relgs = concatMap (map fromSql) sqlRelgs
+                    tags = map (\[n,c] -> (fromSql n, fromSql c)) sqlTags
+
+                rest <- completeArtist conn xs
+                return (Just (Artist id name relgs tags) : rest)
+
+        _ -> do
+                rest <- completeArtist conn xs
+                return (Nothing : rest)
+
+-- |Query a Release Group by its ID
+queryRelG :: String -> IO (Maybe ReleaseGroup)
+queryRelG = undefined -- TODO
+-- get record by id (if not found, return nothing)
+-- get tag list with record id then return just artist
+
