@@ -13,6 +13,7 @@ module MusicBrainz (
         getArtistInfoByID,
         searchArtist,
         queryLocalDB,
+        genPlaylist,
         module MusicBrainz.Database,
         module MusicBrainz.Errors,
         module MusicBrainz.Types,
@@ -78,6 +79,9 @@ queryLocalDB dbFile art alb = do
                               auth = find (\(Artist _ _ rs _) -> elem (relID r) rs) arts
                         in
                            return $ show (fromJust auth) ++ "\n" ++ show r
+
+genPlaylist :: String -> String -> String -> IO [(Artist, ReleaseGroup)]
+genPlaylist = undefined
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

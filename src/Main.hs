@@ -67,7 +67,10 @@ main = do args <- getArgs
                           let
                               optMap = optParse opt
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
-                          undefined -- TODO: implement
+                          playlist <- genPlaylist dbFile art alb
+                          case playlist of
+                                  [] -> printError "problems generating playlist"
+                                  _ -> putStrLn $ concatMap (\(a,r) -> artName a ++ relTitle r ++ "\n") playlist
                   -- Help commands
                   ("help":_) -> printHelp
                   ("usage":_) -> printHelp
