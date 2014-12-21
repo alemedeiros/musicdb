@@ -10,7 +10,12 @@
 --
 -- It is responsible for initializing, storing and querying the local database
 -- file.
-module MusicBrainz.Database (createDB, insertArtist, queryArtistByName) where
+module MusicBrainz.Database (
+        createDB,
+        insertArtist,
+        queryArtistByName,
+        queryRelG,
+) where
 
 import Data.Char (toLower)
 import Data.Maybe
@@ -106,6 +111,19 @@ queryArtistByID dbFile aId = do
         disconnect conn
         return $ catMaybes mArts
 
+-- |Query a Release Group by its ID
+queryRelG :: String -> String -> IO [ReleaseGroup]
+queryRelG dbFile rId = do
+        conn <- connectSqlite3 dbFile
+        queryData <- quickQuery' conn "SELECT * FROM releases WHERE id = ?" [toSql rId]
+
+        mRelgs <- completeRelG conn queryData
+
+        disconnect conn
+        return $ catMaybes mRelgs
+
+-- |Complete the artist query by finding the information about the artists
+-- spread throughout the tables
 completeArtist :: IConnection c => c -> [[SqlValue]] -> IO [Maybe Artist]
 completeArtist conn [] = return []
 completeArtist conn (x:xs) = case x of
@@ -126,9 +144,23 @@ completeArtist conn (x:xs) = case x of
                 rest <- completeArtist conn xs
                 return (Nothing : rest)
 
--- |Query a Release Group by its ID
-queryRelG :: String -> IO (Maybe ReleaseGroup)
-queryRelG = undefined -- TODO
--- get record by id (if not found, return nothing)
--- get tag list with record id then return just artist
+-- |Complete the release group query by finding the information about the
+-- artists spread throughout the tables
+completeRelG :: IConnection c => c -> [[SqlValue]] -> IO [Maybe ReleaseGroup]
+completeRelG conn [] = return []
+completeRelG conn (x:xs) = case x of
+        [sqlId, sqlName, sqlType] -> do
+                sqlTags <-  quickQuery' conn "SELECT name, count FROM rel_tags WHERE id = ?" [ sqlId ]
 
+                let
+                    id = fromSql sqlId
+                    name = fromSql sqlName
+                    typ = fromSql sqlType
+                    tags = map (\[n,c] -> (fromSql n, fromSql c)) sqlTags
+
+                rest <- completeRelG conn xs
+                return (Just (ReleaseGroup id name typ tags) : rest)
+
+        _ -> do
+                rest <- completeRelG conn xs
+                return (Nothing : rest)

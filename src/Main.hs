@@ -25,7 +25,7 @@ import System.Environment
 --  [@search artist@]
 --  Search MusicBrainz database for the given artist and print the top results
 --
---  [@query artist album@] /TODO/
+--  [@query artist album@]
 --  Query the local database for the specified album
 --
 --  [@genplaylist artist album@] /TODO/
@@ -61,8 +61,8 @@ main = do args <- getArgs
                           let
                               optMap = optParse opt
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
-                          artInfo <- queryArtist dbFile art alb
-                          putStr artInfo
+                          info <- queryLocalDB dbFile art alb
+                          putStr info
                   ("genplaylist":art:alb:opt) -> do
                           let
                               optMap = optParse opt

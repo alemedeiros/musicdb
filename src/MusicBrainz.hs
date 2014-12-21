@@ -12,7 +12,7 @@ module MusicBrainz (
         getArtistInfo,
         getArtistInfoByID,
         searchArtist,
-        queryArtist,
+        queryLocalDB,
         module MusicBrainz.Database,
         module MusicBrainz.Errors,
         module MusicBrainz.Types,
@@ -40,7 +40,7 @@ getArtistInfo :: String -> String -> Int -> IO String
 getArtistInfo dbFile art lim = do
         srchList <- searchArtist art lim
         let
-            res = find (\(_,n) -> (==) (map toLower art) (map toLower n)) srchList
+            res = find (\(_,n) -> nonCaseCmp (==) art n) srchList
         case res of
                 Just (id,_) -> getArtistInfoByID dbFile id
                 Nothing -> let
@@ -63,11 +63,21 @@ getArtistInfoByID dbFile id = do
                         insertArtist dbFile (a, rels)
                         return $ "Artist found\n\n" ++ show a ++ "\n\nReleases:\n" ++ foldl (\l e -> l ++ show e ++ "\n\n") "" rels
 
-queryArtist :: String -> String -> String -> IO String
-queryArtist dbFile art alb = do
+queryLocalDB :: String -> String -> String -> IO String
+queryLocalDB dbFile art alb = do
         arts <- queryArtistByName dbFile art
-        return $ show arts
-
+        let
+            relgsId = concatMap (\(Artist _ _ r _) -> r) arts
+        mRelgs <- mapM (queryRelG dbFile) relgsId
+        let
+            relgs = concat mRelgs
+            relg = find (\(ReleaseGroup _ n _ _) -> nonCaseCmp (==) alb n) relgs
+        case relg of
+                Nothing -> return "Album/Artist not found in local database"
+                Just r -> let
+                              auth = find (\(Artist _ _ rs _) -> elem (relID r) rs) arts
+                        in
+                           return $ show (fromJust auth) ++ "\n" ++ show r
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result
@@ -98,3 +108,6 @@ uriDownload uri = do
                                 , rqHeaders = []
                                 , rqBody = ""
                                 }
+-- |Simple case insensitive String comparisson
+nonCaseCmp :: (String -> String -> Bool) -> String -> String -> Bool
+nonCaseCmp f s w = f (map toLower s) (map toLower w)
