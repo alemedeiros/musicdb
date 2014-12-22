@@ -14,15 +14,19 @@ module MusicBrainz (
         searchArtist,
         queryLocalDB,
         genPlaylist,
+        module MusicBrainz.Analysis,
         module MusicBrainz.Database,
         module MusicBrainz.Errors,
         module MusicBrainz.Types,
 ) where
 
+import Control.Applicative
+
 import Data.Char
 import Data.List
 import Data.Maybe
 
+import MusicBrainz.Analysis
 import MusicBrainz.Database
 import MusicBrainz.Errors
 import MusicBrainz.Parser
@@ -64,8 +68,17 @@ getArtistInfoByID dbFile id = do
                         insertArtist dbFile (a, rels)
                         return $ "Artist found\n\n" ++ show a ++ "\n\nReleases:\n" ++ foldl (\l e -> l ++ show e ++ "\n\n") "" rels
 
+-- |Make a query to the local database
 queryLocalDB :: String -> String -> String -> IO String
 queryLocalDB dbFile art alb = do
+        relg <- getLocalRelG dbFile art alb
+        case relg of
+                Nothing -> return "Album/Artist not found in local database\n"
+                Just (a,r) -> return $ show a ++ "\n" ++ show r
+
+-- |Get Release Group from local database
+getLocalRelG :: String -> String -> String -> IO (Maybe (Artist, ReleaseGroup))
+getLocalRelG dbFile art alb = do
         arts <- queryArtistByName dbFile art
         let
             relgsId = concatMap (\(Artist _ _ r _) -> r) arts
@@ -74,14 +87,20 @@ queryLocalDB dbFile art alb = do
             relgs = concat mRelgs
             relg = find (\(ReleaseGroup _ n _ _) -> nonCaseCmp (==) alb n) relgs
         case relg of
-                Nothing -> return "Album/Artist not found in local database"
+                Nothing -> return Nothing
                 Just r -> let
-                              auth = find (\(Artist _ _ rs _) -> elem (relID r) rs) arts
+                              Just auth = find (\(Artist _ _ rs _) -> elem (relID r) rs) arts
                         in
-                           return $ show (fromJust auth) ++ "\n" ++ show r
+                           return (Just (auth, r))
 
-genPlaylist :: String -> String -> String -> IO [(Artist, ReleaseGroup)]
-genPlaylist = undefined
+--genPlaylist :: String -> String -> String -> IO [(Artist, ReleaseGroup)]
+genPlaylist dbFile art alb = do
+        start <- getLocalRelG dbFile art alb
+        let
+            playlist = [fromJust start]
+            tagList = genStyleTagList <$> start
+        return $ fromJust tagList
+
 
 -- |Search for the artist data by the artist name, limiting the number of
 -- artists in the result

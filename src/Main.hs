@@ -70,7 +70,8 @@ main = do args <- getArgs
                           playlist <- genPlaylist dbFile art alb
                           case playlist of
                                   [] -> printError "problems generating playlist"
-                                  _ -> putStrLn $ concatMap (\(a,r) -> artName a ++ relTitle r ++ "\n") playlist
+                                  --_ -> putStrLn $ concatMap (\(a,r) -> artName a ++ relTitle r ++ "\n") playlist
+                                  _ -> putStrLn $ concatMap (\(t,c) -> show c ++ "\t" ++ show t ++ "\n") playlist
                   -- Help commands
                   ("help":_) -> printHelp
                   ("usage":_) -> printHelp
