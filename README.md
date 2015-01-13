@@ -36,3 +36,9 @@ To generate the documentation for the whole project, run the command
 
 The documentation can be viewed with your favourite browser, just open the file
 `dist/doc/html/musicdb/musicdb/index.html`.
+
+##Usage examples
+
+There are some usage examples on the `examples.sh` file, it can be run as a
+shell script, but it is recommended to read the commands and their comments so
+you know what is happening and how to use the commands.
