@@ -20,6 +20,9 @@ data Artist = Artist
         --, artArea :: Maybe Area
         }
 
+instance Eq Artist where
+        (==) Artist{artID=a} Artist{artID=b} = a == b
+
 -- Pretty print for Artist
 instance Show Artist where
         show (Artist id name rels tags) = "Artist:\t" ++ name  ++ "\nid:\t" ++ id

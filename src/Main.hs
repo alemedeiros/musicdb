@@ -4,6 +4,11 @@
 -- Main file for musicdb, a MusicBrainz based artist information database
 -- application
 
+-- | A small project for artist/music information database using MusicBrainz as
+-- a source of information (Individual Project for QMUL's ECS713 - Functional
+-- Programming Module).
+--
+-- The project code can be found on github: https://github.com/alemedeiros/musicdb
 module Main where
 
 import Data.Map (Map)
@@ -28,8 +33,9 @@ import System.Environment
 --  [@query artist album@]
 --  Query the local database for the specified album
 --
---  [@genplaylist artist album@] /TODO/
---  Generate a playlist of similar (local) albums, starting with the given album
+--  [@recommend artist album@]
+--  Generate a recommendation list of similar artists (with the computed score)
+--  from the local database, starting with the given album/artist
 main :: IO ()
 main = do args <- getArgs
           case args of
@@ -63,15 +69,16 @@ main = do args <- getArgs
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
                           info <- queryLocalDB dbFile art alb
                           putStr info
-                  ("genplaylist":art:alb:opt) -> do
+                  ("recommend":art:alb:opt) -> do
                           let
                               optMap = optParse opt
                               dbFile = fromJust $ Map.lookup "dbfile" optMap
-                          playlist <- genPlaylist dbFile art alb
-                          case playlist of
-                                  [] -> printError "problems generating playlist"
-                                  --_ -> putStrLn $ concatMap (\(a,r) -> artName a ++ relTitle r ++ "\n") playlist
-                                  _ -> putStrLn $ concatMap (\(t,c) -> show c ++ "\t" ++ show t ++ "\n") playlist
+                              lim = read . fromJust $ Map.lookup "lim" optMap
+                              thr = read . fromJust $ Map.lookup "threshold" optMap
+                          recommendations <- recommend dbFile lim thr art alb
+                          case recommendations of
+                                  [] -> printError "problems computing recommendations"
+                                  _ -> putStrLn $ concatMap (\(s,a) -> show s ++ "\t" ++ artName a ++ "\n") recommendations
                   -- Help commands
                   ("help":_) -> printHelp
                   ("usage":_) -> printHelp
@@ -96,6 +103,8 @@ optParse = fillDefaultOpt defaultOptions . optParseAux
                 optParseAux ("-l":lim:opt) = Map.insert "lim" lim $ optParseAux opt
                 optParseAux ("--dbfile":file:opt) = Map.insert "dbfile" file $ optParseAux opt
                 optParseAux ("-f":file:opt) = Map.insert "dbfile" file $ optParseAux opt
+                optParseAux ("--threshold":file:opt) = Map.insert "threshold" file $ optParseAux opt
+                optParseAux ("-t":file:opt) = Map.insert "threshold" file $ optParseAux opt
                 optParseAux opt = error $ "couldn't parse arguments -- " ++ show opt
 
 -- |Fill the option map with the 'defaultOption' for options not specified by
@@ -108,4 +117,4 @@ fillDefaultOpt ((k,v):def) opt
 
 -- |Default options definition
 defaultOptions :: [(String, String)]
-defaultOptions = [ ("id", "False"), ("lim", "4") , ("dbfile", "music.db") ]
+defaultOptions = [ ("id", "False"), ("lim", "4") , ("dbfile", "music.db"), ("threshold", "100") ]

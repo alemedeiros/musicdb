@@ -14,6 +14,8 @@ module MusicBrainz.Database (
         createDB,
         insertArtist,
         queryArtistByName,
+        queryArtistByID,
+        getAllArtists,
         queryRelG,
 ) where
 
@@ -109,6 +111,17 @@ queryArtistByID dbFile aId = do
         mArts <- completeArtist conn queryData
 
         disconnect conn
+        return $ catMaybes mArts
+
+-- |Return a list with all the artists in the local database.
+getAllArtists :: String -> IO [Artist]
+getAllArtists dbFile = do
+        -- TODO check if dbFile has necessary tables
+        conn <- connectSqlite3 dbFile
+        queryData <- quickQuery' conn "SELECT * FROM artists" []
+
+        mArts <- completeArtist conn queryData
+
         return $ catMaybes mArts
 
 -- |Query a Release Group by its ID

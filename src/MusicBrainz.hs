@@ -13,7 +13,7 @@ module MusicBrainz (
         getArtistInfoByID,
         searchArtist,
         queryLocalDB,
-        genPlaylist,
+        recommend,
         module MusicBrainz.Analysis,
         module MusicBrainz.Database,
         module MusicBrainz.Errors,
@@ -23,6 +23,7 @@ module MusicBrainz (
 import Control.Applicative
 
 import Data.Char
+import Data.Function (on)
 import Data.List
 import Data.Maybe
 
@@ -35,6 +36,8 @@ import MusicBrainz.URI
 
 import Network.HTTP
 import Network.URI
+
+import System.Posix.Unistd
 
 type URL = String
 
@@ -93,13 +96,18 @@ getLocalRelG dbFile art alb = do
                         in
                            return (Just (auth, r))
 
---genPlaylist :: String -> String -> String -> IO [(Artist, ReleaseGroup)]
-genPlaylist dbFile art alb = do
+-- |Generate a recommendation list based on the given artist-album pair
+recommend :: String -> Int -> Int -> String -> String -> IO [(Int, Artist)]
+recommend dbFile lim thr art alb = do
         start <- getLocalRelG dbFile art alb
         let
-            playlist = [fromJust start]
-            tagList = genStyleTagList <$> start
-        return $ fromJust tagList
+            tagList = fromMaybe [] $ genStyleTagList <$> start
+            analyse = sortBy (flip compare `on` fst) . filter ((<) thr . fst) . map (analyseArtist tagList)
+            startArt = fromJust $ fmap fst start
+
+        artists <- getAllArtists dbFile
+
+        return . take lim . analyse $ filter (startArt /=) artists
 
 
 -- |Search for the artist data by the artist name, limiting the number of
@@ -116,6 +124,7 @@ searchArtist art lim = do
 uriDownload :: URI -> IO String
 uriDownload uri = do
         resp <- simpleHTTP request
+        usleep 500000 -- wait a little while, so server doesn't block us
         case resp of
                 Left x -> do
                         printError $ "couldn't download page: " ++ show uri ++ "\nReceived follwing error:\n" ++ show x
